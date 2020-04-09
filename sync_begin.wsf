@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="windows-1251" standalone = "yes" ?>
+<package>
+
+<job id="SyncBegin">
+<script language="VBScript" src="ClassSyncTool.vbs"/>
+<script language="VBScript">
+	'<![CDATA[
+	Dim objSync
+	Set objSync = (New SyncTool)("SyncBegin")
+
+	On Error Resume Next
+
+	With objSync
+		.Debug "begin"
+		' Показ сообщения
+		.Run "nircmdc trayballoon ""sync_begin"" ""Старт синхронизации."" ""C:\6604\data\icons\admin.ico"" 6000", 0, False
+
+		' Запуск рабочих утилит
+		.Run "wscript //job:""SyncLoopUtils"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+
+		' Задаем различные настройки
+		.Run "wscript //job:""SyncTuning"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
+
+		' Запускаем мониторинг изменений на сервере и сихронизацию с локальной папкой
+		.Run "robocopy " & .NetPathToSync & "\sync " & .LocalPathToSync & " /MIR /FFT /Z /R:2 /W:2 /MON:1 /MOT:1", 0, False
+
+		' Запуск задачь по времени
+		.Run "wscript //job:""SyncLoop"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
+
+		' Сбор данных о ПК
+		.Run "wscript //job:""SyncComputerData"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
+
+		.DebugError(Err)
+		.Debug "end"
+	End With
+	']]>
+</script>
+</job>
+
+<job id="SyncTuning">
+<script language="VBScript" src="ClassSyncTool.vbs"/>
+<script language="VBScript">
+	'<![CDATA[
+	Dim objSync
+	Set objSync = (New SyncTool)("SyncTuning")
+
+	On Error Resume Next
+
+	With objSync
+		.Debug "begin"
+		' Удалить ярлык IM в папке автозапуска
+		'.Run "nircmdc execmd del ""~$folder.startup$\IM.lnk""", 0, False
+
+		' Создать ярлык на sync.wsf в папке автозапуска
+		.Run "nircmdc shortcut " & .Quotes(.LocalPathToSync & "\tools\sync.wsf") & " " & .Quotes("~$folder.startup$") & " " & .Quotes("Sync"), 0, False
+
+		' Создать ярлык на LaunchBar в папке автозапуска
+		.Run "nircmdc shortcut " & .Quotes(.LocalPathToSync & "\utilities\LaunchBar\LaunchBar.exe") & " " & .Quotes("~$folder.startup$") & " " & .Quotes("LaunchBar") & " " & .Quotes("LaunchBar.txt"), 0, False
+
+		' Создать ярлык на EYEcu в папке автозапуска
+		.Run "nircmdc shortcut " & .Quotes(.LocalPathToSync & "\utilities\eyecu\eyecu.exe") & " " & .Quotes("~$folder.startup$") & " " & .Quotes("EYEcu"), 0, False
+
+		' Создаем в публичной папке на файловом сервере папку сотрудника
+		'.CreateDirs .PathToPublic & "\Сотрудники\" & .UserFullName
+
+		' Создаем на сервере папку сотрудника для хранения данных и копируем файлы
+		.CopyFolder .NetPathToSync & "\sync-users\_for_all", .NetPathToSync & "\sync-users\" & .LoginName, True
+
+		' Выставлям права на папки
+		.Run "cacls " & .LocalPathToSync & " /T /E /C /G " & .Quotes(.GeneralGroup) & ":F", 0, True
+
+		' Запись имени компьютера, на котором авторизировался пользователь в поле Телефоны-Заметки
+		.PutLDAP "info", .ComputerName
+
+		' Отключаем скрытие значков в трее
+		.RegWrite "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\EnableAutoTray", 0, "REG_DWORD"
+
+		.DebugError(Err)
+		.Debug "end"
+	End With
+	']]>
+</script>
+</job>
+
+<job id="SyncLoop">
+<script language="VBScript" src="ClassSyncTool.vbs"/>
+<script language="VBScript">
+	'<![CDATA[
+	Dim objSync
+	Set objSync = (New SyncTool)("SyncLoop")
+	Dim timeStart, timePastMin
+
+	On Error Resume Next
+
+	timeStart = Now
+
+	With objSync
+		.Debug "begin"
+		Do
+			timePastMin = DateDiff("n", timeStart, Now)
+
+			If timePastMin > 0 Then
+				' Выполнять каждые 5 минут
+				If timePastMin Mod 5 = 0 Then
+					.Run "cscript //job:""SyncLoop5m"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+				End If
+
+				' Выполнять каждые 10 минут
+				If timePastMin Mod 9 = 0 Then
+					.Run "cscript //job:""SyncLoop10m"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+				End If
+
+				' Выполнять каждые 30 минут
+				If timePastMin Mod 31 = 0 Then
+					.Run "cscript //job:""SyncLoop30m"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+				End If
+
+				' Выполнять каждые 60 минут
+				If timePastMin Mod 62 = 0 Then
+					.Run "cscript //job:""SyncLoop60m"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+				End If
+			End If
+			.Sleep(60)
+		Loop
+
+		.Debug "end"
+	End With
+	']]>
+</script>
+</job>
+
+<job id="SyncComputerData">
+<script language="VBScript" src="ClassSyncTool.vbs"/>
+<script language="VBScript" src="ClassHardwareInfo.vbs"/>
+<script language="VBScript" src="SubSoftwareInstall.vbs"/>
+<script language="VBScript">
+	'<![CDATA[
+	Dim objSync
+	Set objSync = (New SyncTool)("SyncComputerData")
+
+	On Error Resume Next
+
+	With objSync
+		.Debug "begin"
+		' Аппаратное обеспечение
+		.Debug "Сбор данных о ПК"
+		Dim objHW
+		Set objHW = (New HardwareInfo)()
+		.SaveTxt objHW.GetTxt(), .AppDataFolder & "\hardware_" & .ComputerName & ".txt", True
+		.SaveTxt objHW.GetCSV(), .AppDataFolder & "\hardware_" & .ComputerName & ".csv", True
+		Set objHW = Nothing
+		.DebugError(Err)
+
+		' Список установленного ПО
+		.Debug "Сбор данных об установленнном ПО"
+		.SaveTxt LoadRegUninstall(HKEY_LOCAL_MACHINE, "Software\Microsoft\Windows\CurrentVersion\Uninstall\"), .AppDataFolder & "\install_programs_" & .ComputerName & ".csv", True
+		.SaveTxt LoadRegUninstall(HKEY_CURRENT_USER, "Software\Microsoft\Windows\CurrentVersion\Uninstall\"), .AppDataFolder & "\install_programs_" & .ComputerName & ".csv", False
+		.SaveTxt LoadRegUninstall(HKEY_LOCAL_MACHINE, "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\"), .AppDataFolder & "\install_programs_" & .ComputerName & ".csv", False
+		.DebugError(Err)
+
+		' Список автозапуска на ПК
+		'.Debug "Сбор данных о программах в автозагрузке"
+		'.Run .LocalPathToSync & "\utilities\Autoruns\Autoruns.exe -a " & .AppDataFolder & "\autoruns_" & .ComputerName & ".arn", 0, True
+		.DebugError(Err)
+
+		.Debug "end"
+	End With
+	']]>
+</script>
+</job>
+
+</package>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="windows-1251" ?>
+<job id="Sync">
+<script language="VBScript" src="ClassSyncTool.vbs"/>
+<script language="VBScript">
+	'<![CDATA[
+	Dim objSync
+	WScript.Sleep 10000
+	Set objSync = (New SyncTool)("Sync")
+
+	With objSync
+		' Устновка переменных
+		' Имя папки для сихронизации
+		.SyncFolderName = "6604"
+		' Путь к папке на локальном ПК
+		.LocalPathToSync = "C:\" & .SyncFolderName
+		' Путь к папке на сервере
+		.NetPathToSync = "\\10.66.4.215\" & .SyncFolderName
+		' Путь до общей папке на сервере
+		.PathToPublic = "\\10.66.4.253\Public"
+		' Группа в AD пользователей филиала
+		.GeneralGroup = "6604 Общая"
+		' Установка переменных окружения
+		' Путь к утилитам
+		.SetEnviroment "PATH", .LocalPathToSync & "\tools"
+		' Путь к иконкам
+		.SetEnviroment "FSSPathIcons", .LocalPathToSync & "\data\icons"
+
+		.CreateDirs .AppDataFolder
+		.Init("Sync")
+		' -----------------------------------------------------------------------------
+		.DebugClearIfSize(1000)
+		.Debug "begin"
+		.Debug "============================== " & "Переменные" & "============================== "
+		.Debug "PathToLogFile = " & .PathToLogFile
+		.Debug "SyncFolderName = " & .SyncFolderName
+		.Debug "LocalPathToSync = " & .LocalPathToSync
+		.Debug "NetPathToSync = " & .NetPathToSync
+		.Debug "PathToPublic = " & .PathToPublic
+		.Debug "GeneralGroup = " & .GeneralGroup
+		.Debug "LoginName = " & .LoginName
+		.Debug "ComputerName = " & .ComputerName
+		.Debug "AppDataFolder = " & .AppDataFolder
+		.Debug "UserFullName = " & .UserFullName
+		.Debug "LDAPUserName = " & .LDAPUserName
+		.Debug "============================== " & Now & "============================== "
+		On Error Resume Next
+		.Debug "Копирование папки tools с сервера на ПК"
+		.CopyFolder .NetPathToSync & "\sync\tools", .LocalPathToSync & "\tools", True
+		.Sleep(3)
+		.Run .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
+		.Debug "end"
+	End With
+	']]>
+</script>
+</job>
