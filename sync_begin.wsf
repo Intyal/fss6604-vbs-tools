@@ -5,6 +5,7 @@
 <script language="VBScript" src="ClassSyncTool.vbs"/>
 <script language="VBScript">
 	'<![CDATA[
+	WScript.Sleep 2000
 	Dim objSync
 	Set objSync = (New SyncTool)("SyncBegin")
 
@@ -22,7 +23,7 @@
 		.Run "wscript //job:""SyncTuning"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
 
 		' Запускаем мониторинг изменений на сервере и сихронизацию с локальной папкой
-		.Run "robocopy " & .NetPathToSync & "\sync " & .LocalPathToSync & " /MIR /FFT /Z /R:2 /W:2 /MON:1 /MOT:1", 0, False
+		.Run "robocopy " & .NetPathToSync & "\sync " & .LocalPathToSync & " /LOG+:" & .AppDataFolder & "\robocopy.log" & " /MIR /FFT /Z /R:2 /W:2 /MON:1 /MOT:1", 0, False
 
 		' Запуск задачь по времени
 		.Run "wscript //job:""SyncLoop"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
@@ -62,6 +63,9 @@
 
 		' Создаем в публичной папке на файловом сервере папку сотрудника
 		'.CreateDirs .PathToPublic & "\Сотрудники\" & .UserFullName
+
+		' Заменяем фаил HOSTS с именами локальных серверов
+		'.CopyFile .NetPathToSync & "\sync-files\hosts", "C:\Windows\System32\drivers\etc\", True
 
 		' Создаем на сервере папку сотрудника для хранения данных и копируем файлы
 		.CopyFolder .NetPathToSync & "\sync-users\_for_all", .NetPathToSync & "\sync-users\" & .LoginName, True

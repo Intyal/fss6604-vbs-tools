@@ -249,7 +249,7 @@ Class SyncTool
 		strDir = objFSO.GetAbsolutePathName(strDirName)
 		arrDirs = Split(strDir, "\")
 
-		Debug "Создание папки " & strDirBuild
+		Debug "Создание папки " & strDirName
 		If Left(strDir, 2) = "\\" Then
 			strDirBuild = "\\" & arrDirs(2) & "\" & arrDirs(3) & "\"
 			idxFirst    = 4
@@ -271,6 +271,11 @@ Class SyncTool
 		CreateDirs strDestination
 		Debug "Копирование из " & strSource & " в " & strDestination
 		objFSO.CopyFolder strSource, strDestination, bRewrite
+	End Sub
+
+	Public Sub CopyFile(ByVal strSource, ByVal strDestination, ByVal bRewrite)
+		Debug "Копирование из " & strSource & " в " & strDestination
+		objFSO.CopyFile strSource, strDestination, bRewrite
 	End Sub
 
 	Public Sub Sleep(ByVal nSeconds)

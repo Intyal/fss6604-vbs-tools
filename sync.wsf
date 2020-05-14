@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <job id="Sync">
+<script language="VBScript">
+	WScript.Sleep 20000
+</script>
 <script language="VBScript" src="ClassSyncTool.vbs"/>
 <script language="VBScript">
 	'<![CDATA[
 	Dim objSync
-	WScript.Sleep 10000
 	Set objSync = (New SyncTool)("Sync")
 
 	With objSync
@@ -25,7 +27,6 @@
 		' Путь к иконкам
 		.SetEnviroment "FSSPathIcons", .LocalPathToSync & "\data\icons"
 
-		.CreateDirs .AppDataFolder
 		.Init("Sync")
 		' -----------------------------------------------------------------------------
 		.DebugClearIfSize(1000)
@@ -43,10 +44,14 @@
 		.Debug "UserFullName = " & .UserFullName
 		.Debug "LDAPUserName = " & .LDAPUserName
 		.Debug "============================== " & Now & "============================== "
+		
 		On Error Resume Next
+		.CreateDirs .AppDataFolder
+		.CreateDirs .LocalPathToSync
 		.Debug "Копирование папки tools с сервера на ПК"
-		.CopyFolder .NetPathToSync & "\sync\tools", .LocalPathToSync & "\tools", True
-		.Sleep(3)
+		'.CopyFolder .NetPathToSync & "\sync\tools\*", .LocalPathToSync & "\tools\", True
+		.Run "robocopy " & .NetPathToSync & "\sync\tools " & .LocalPathToSync & "\tools /LOG+:" & .AppDataFolder & "\robocopy.log" & " /PURGE", 0, False
+		.Sleep(5)
 		.Run .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
 		.Debug "end"
 	End With
