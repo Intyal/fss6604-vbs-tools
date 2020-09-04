@@ -5,7 +5,7 @@
 <script language="VBScript" src="ClassSyncTool.vbs"/>
 <script language="VBScript">
 	'<![CDATA[
-	WScript.Sleep 2000
+	'WScript.Sleep 2000
 	Dim objSync
 	Set objSync = (New SyncTool)("SyncBegin")
 
@@ -14,22 +14,27 @@
 	With objSync
 		.Debug "begin"
 		' Показ сообщения
-		.Run "nircmdc trayballoon ""sync_begin"" ""Старт синхронизации."" ""C:\6604\data\icons\admin.ico"" 6000", 0, False
+		.Run "nircmdc trayballoon ""sync_begin"" ""Старт синхронизации."" ""C:\6604\data\icons\admin.ico"" 12000", 0, False
 
-		' Запуск рабочих утилит
-		.Run "wscript //job:""SyncLoopUtils"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
+		' Синхронизация пользовательских данных
+		' Ждем завершения
+		.Run "cscript //job:""SyncLoopData"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, True
 
 		' Задаем различные настройки
 		.Run "wscript //job:""SyncTuning"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
 
 		' Запускаем мониторинг изменений на сервере и сихронизацию с локальной папкой
-		.Run "robocopy " & .NetPathToSync & "\sync " & .LocalPathToSync & " /LOG+:" & .AppDataFolder & "\robocopy.log" & " /MIR /FFT /Z /R:2 /W:2 /MON:1 /MOT:1", 0, False
+		.Run "robocopy " & .NetPathToSync & "\sync " & .LocalPathToSync & " /LOG+:" & .Quotes(.AppDataFolder & "\robocopy.log") & " /MIR /FFT /Z /MON:1 /MOT:1", 0, False
 
 		' Запуск задачь по времени
 		.Run "wscript //job:""SyncLoop"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
 
 		' Сбор данных о ПК
 		.Run "wscript //job:""SyncComputerData"" " & .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
+
+		' Запуск рабочих утилит
+		.Sleep(10)
+		.Run "wscript //job:""SyncLoopUtils"" " & .LocalPathToSync & "\tools\sync_loop.wsf", 0, False
 
 		.DebugError(Err)
 		.Debug "end"

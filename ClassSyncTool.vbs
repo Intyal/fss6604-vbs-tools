@@ -18,12 +18,14 @@ Class SyncTool
 	
 	Private strLoginName
 	Private strComputerName
+	'Private strComputerIP
 	Private strAppDataFolder
 	Private strUserFullName
 	Private strLDAPUserName
 
 	Private strLogFile
 	Private strScrName
+	Private strJobName
 
 	Private objLogFile
 
@@ -49,7 +51,7 @@ Class SyncTool
 
 	' -------------------------------------------------------------------------
 
-	Public Default Function Init(strJobName)
+	Public Default Function Init(job)
 		strMyPath = wshEnviromentUser("FSSPath")
 		strMyPathNet = wshEnviromentUser("FSSPathNet")
 		strMyPathPublic = wshEnviromentUser("FSSPathPublic")
@@ -64,6 +66,8 @@ Class SyncTool
 		strLDAPUserName = objSysInfo.UserName
 		arrName = split(objSysInfo.UserName, ",")
 		strUserFullName = mid(arrName(0), 4)
+
+		strJobName = job
 
 		strLogFile = strAppDataFolder & "\sync.log"
 		strScrName = WScript.ScriptName & "[" & strJobName & "]"
@@ -83,6 +87,10 @@ Class SyncTool
 
 		Set Init = Me
 	End Function
+
+	Public Property Get JobName()
+		JobName = strJobName
+	End Property
 
 	Public Property Let PathToLogFile(strValue)
 		strLogFile = strValue
@@ -196,7 +204,7 @@ Class SyncTool
 			Set objLogFile = Nothing
 			If Err.Number <> 0 Then Sleep 1
 			i = i + 1
-		Loop While (Err.Number <> 0) and (i < 10)
+		Loop While (Err.Number <> 0) and (i < 10) ' Если фаил занят, попробовать еще раз
 	End Sub
 
 	Public Sub DebugError(objErr)
@@ -270,7 +278,8 @@ Class SyncTool
 	Public Sub CopyFolder(ByVal strSource, ByVal strDestination, ByVal bRewrite)
 		CreateDirs strDestination
 		Debug "Копирование из " & strSource & " в " & strDestination
-		objFSO.CopyFolder strSource, strDestination, bRewrite
+		objFSO.CopyFolder strSource, strDestination, True
+		Debug "Копирование завершено"
 	End Sub
 
 	Public Sub CopyFile(ByVal strSource, ByVal strDestination, ByVal bRewrite)
@@ -332,5 +341,13 @@ Class SyncTool
 		Debug "Запись в реестр " & strKey & " = " & strValue & "(" & strType & ")"
 		objWshShell.RegWrite strKey, strValue, strType
 	End Sub
+
+	Public Function FileExists(ByVal strValue)
+		FileExists = objFSO.FileExists(strValue)
+	End Function
+
+	Public Function GetFileVersion(ByVal strValue)
+		GetFileVersion = objFSO.GetFileVersion(strValue)
+	End Function
 
 End Class
