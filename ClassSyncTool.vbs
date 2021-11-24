@@ -1,4 +1,4 @@
-' Версия 12-03-2020
+' Версия 07-09-2020
 Option Explicit
 
 Class SyncTool
@@ -7,21 +7,11 @@ Class SyncTool
 	Private objFSO
 	Private objSysInfo
 	Private wshEnviromentUser
+	Private wshEnviromentProcess
 	Private objSWbemServices
 	Private objLDAPUser
 
-	Private strMyFolderName
-	Private strMyPath
-	Private strMyPathNet
-	Private strMyPathPublic
-	Private strMyGeneralGroup
-	
-	Private strLoginName
-	Private strComputerName
-	'Private strComputerIP
-	Private strAppDataFolder
-	Private strUserFullName
-	Private strLDAPUserName
+	Private dictEnv
 
 	Private strLogFile
 	Private strScrName
@@ -30,14 +20,21 @@ Class SyncTool
 	Private objLogFile
 
 	Private Sub Class_Initialize
-		On Error Resume Next
+		'On Error Resume Next
 
 		Set objWshShell = WScript.CreateObject("WScript.Shell")
 		Set objFSO = WScript.CreateObject("Scripting.FileSystemObject")
-		Set objSysInfo = CreateObject("ADSystemInfo")
 		Set wshEnviromentUser = objWshShell.Environment("User")
+		Set wshEnviromentProcess = objWshShell.Environment("Process")
 		Set objSWbemServices = GetObject("winmgmts:\\.\root\cimv2")
-		Set objLDAPUser = GetObject("LDAP://" & objSysInfo.UserName)
+		Set objSysInfo = CreateObject("ADSystemInfo")
+		' Информация из домена
+		'Do
+		'	Sleep 5
+		'Loop While (wshEnviromentProcess("LOGONSERVER") = "") ' Если домен не доступен, попробовать еще раз
+		'Set objLDAPUser = GetObject("LDAP://fss.local:389/" & objSysInfo.UserName)
+		Set dictEnv = CreateObject("Scripting.Dictionary")
+		
 	End Sub
 
 	Private Sub Class_Terminate
@@ -52,40 +49,35 @@ Class SyncTool
 	' -------------------------------------------------------------------------
 
 	Public Default Function Init(job)
-		strMyPath = wshEnviromentUser("FSSPath")
-		strMyPathNet = wshEnviromentUser("FSSPathNet")
-		strMyPathPublic = wshEnviromentUser("FSSPathPublic")
-		strMyGeneralGroup = wshEnviromentUser("FSSGeneralGroup")
-		strMyFolderName = wshEnviromentUser("FSSFolderName")
+		'On Error Resume Next
 
-		strLoginName = objWshShell.ExpandEnvironmentStrings("%USERNAME%")
-		strComputerName = objWshShell.ExpandEnvironmentStrings("%COMPUTERNAME%")
-		strAppDataFolder = objWshShell.ExpandEnvironmentStrings("%APPDATA%") & "\" & strMyFolderName
+		Dim strItem, intEq, strName, strValue
 
-		Dim arrName
-		strLDAPUserName = objSysInfo.UserName
-		arrName = split(objSysInfo.UserName, ",")
-		strUserFullName = mid(arrName(0), 4)
+		For Each strItem In wshEnviromentUser
+			'If Left(strItem, 3) = "FSS" Then
+				intEq = InStr(1, strItem, "=" , vbTextCompare)
+				strName = Left(strItem, intEq - 1)
+				strValue = Mid(strItem, intEq + 1)
+				dictEnv.Add strName, strValue
+			'End If
+		Next
+
+		dictEnv.Add "UserName", objWshShell.ExpandEnvironmentStrings("%USERNAME%")
+		dictEnv.Add "ComputerName", objWshShell.ExpandEnvironmentStrings("%COMPUTERNAME%")
+		dictEnv.Add "AppData", objWshShell.ExpandEnvironmentStrings("%APPDATA%") & "\" & wshEnviromentUser("FSSFolderName")
 
 		strJobName = job
 
-		strLogFile = strAppDataFolder & "\sync.log"
+		strLogFile = objWshShell.ExpandEnvironmentStrings("%APPDATA%") & "\" & wshEnviromentUser("FSSFolderName") & "\" & "sync.log"
 		strScrName = WScript.ScriptName & "[" & strJobName & "]"
 
-		'Debug "ClassSyncTools init"
-		'Debug "strMyPath = " & strMyPath
-		'Debug "strMyPathNet = " & strMyPathNet
-		'Debug "strMyPathPublic = " & strMyPathPublic
-		'Debug "strMyGeneralGroup = " & strMyGeneralGroup
-		'Debug "strMyFolderName = " & strMyFolderName
-		'Debug "strLoginName = " & strLoginName
-		'Debug "strComputerName = " & strComputerName
-		'Debug "strAppDataFolder = " & strAppDataFolder
-		'Debug "strUserFullName = " & strUserFullName
-		'Debug "strLogFile = " & strLogFile
-		'Debug "strScrName = " & strScrName
+		If Err.Number <> 0 Then DebugError(Err)
 
 		Set Init = Me
+	End Function
+
+	Public Function Env(ByVal strName)
+		Env = dictEnv.Item(strName)
 	End Function
 
 	Public Property Get JobName()
@@ -100,77 +92,21 @@ Class SyncTool
 		PathToLogFile = strLogFile
 	End Property
 
-	Public Property Let SyncFolderName(strValue)
-		strMyFolderName = strValue
-		SetEnviroment "FSSFolderName", strValue
-	End Property
-
-	Public Property Get SyncFolderName()
-		SyncFolderName = strMyFolderName
-	End Property
-
-	Public Property Let LocalPathToSync(strValue)
-		strMyPath = strValue
-		SetEnviroment "FSSPath", strValue
-	End Property
-
-	Public Property Get LocalPathToSync()
-		LocalPathToSync = strMyPath
-	End Property
-
-	Public Property Let NetPathToSync(strValue)
-		strMyPathNet = strValue
-		SetEnviroment "FSSPathNet", strValue
-	End Property
-
-	Public Property Get NetPathToSync()
-		NetPathToSync = strMyPathNet
-	End Property
-
-	Public Property Let PathToPublic(strValue)
-		strMyPathPublic = strValue
-		SetEnviroment "FSSPathPublic", strValue
-	End Property
-
-	Public Property Get PathToPublic()
-		PathToPublic = strMyPathPublic
-	End Property
-
-	Public Property Let GeneralGroup(strValue)
-		strMyGeneralGroup = strValue
-		SetEnviroment "FSSGeneralGroup", strValue
-	End Property
-
-	Public Property Get GeneralGroup()
-		GeneralGroup = strMyGeneralGroup
-	End Property
-
-	Public Property Get LoginName()
-		LoginName = strLoginName
-	End Property
-
-	Public Property Get ComputerName()
-		ComputerName = strComputerName
-	End Property
-
-	Public Property Get AppDataFolder()
-		AppDataFolder = strAppDataFolder
-	End Property
-
-	Public Property Get UserFullName()
-		UserFullName = strUserFullName
-	End Property
-
-	Public Property Get LDAPUserName()
-		LDAPUserName = strLDAPUserName
-	End Property
-
 	Public Sub SetEnviroment(ByVal strName, ByVal strValue)
+		Debug "Установка переменной окружения [User]" & Quotes(strName) & " = " & Quotes(strValue)
 		wshEnviromentUser(strName) = strValue
 	End Sub
 
 	Public Function GetEnviroment(ByVal strName)
 		GetEnviroment = wshEnviromentUser(strName)
+	End Function
+
+	Public Sub SetEnviromentProcess(ByVal strName, ByVal strValue)
+		wshEnviromentProcess(strName) = strValue
+	End Sub
+
+	Public Function GetEnviromentProcess(ByVal strName)
+		GetEnviromentProcess = wshEnviromentProcess(strName)
 	End Function
 
 	Public Function Quotes(ByVal strValue)
@@ -204,7 +140,7 @@ Class SyncTool
 			Set objLogFile = Nothing
 			If Err.Number <> 0 Then Sleep 1
 			i = i + 1
-		Loop While (Err.Number <> 0) and (i < 10) ' Если фаил занят, попробовать еще раз
+		Loop While (Err.Number <> 0) and (i < 10) ' Если фаил занят, попробовать еще несколько раз
 	End Sub
 
 	Public Sub DebugError(objErr)
@@ -216,16 +152,20 @@ Class SyncTool
 
 	' 
 	Public Sub DebugClear()
-		On Error Resume Next
-		objFSO.DeleteFile strLogFile, True
+		DebugClearIfSizeByName strLogFile, 0
 	End Sub
 
 	' Удалять лог фаил при превышении intSize килобайт 
 	Public Sub DebugClearIfSize(ByVal intSize)
+		DebugClearIfSizeByName strLogFile, intSize
+	End Sub
+
+	' Удалять лог фаил при превышении intSize килобайт, с указанием пути к файлу
+	Public Sub DebugClearIfSizeByName(ByVal strName, ByVal intSize)
 		On Error Resume Next
-		Set objLogFile = objFSO.GetFile(strLogFile)
+		Set objLogFile = objFSO.GetFile(strName)
 		If objLogFile.Size > (intSize * 1000) Then
-			objFSO.DeleteFile strLogFile, True
+			objFSO.DeleteFile strName, True
 		End If
 		Set objLogFile = Nothing
 	End Sub
@@ -257,33 +197,37 @@ Class SyncTool
 		strDir = objFSO.GetAbsolutePathName(strDirName)
 		arrDirs = Split(strDir, "\")
 
-		Debug "Создание папки " & strDirName
-		If Left(strDir, 2) = "\\" Then
-			strDirBuild = "\\" & arrDirs(2) & "\" & arrDirs(3) & "\"
-			idxFirst    = 4
+		If objFSO.FolderExists(strDir) Then
+			Debug "Папка " & Quotes(strDirName) & " уже существует."
 		Else
-			strDirBuild = arrDirs(0) & "\"
-			idxFirst    = 1
+			If Left(strDir, 2) = "\\" Then
+				strDirBuild = "\\" & arrDirs(2) & "\" & arrDirs(3) & "\"
+				idxFirst    = 4
+			Else
+				strDirBuild = arrDirs(0) & "\"
+				idxFirst    = 1
+			End If
+			For i = idxFirst to Ubound(arrDirs)
+				strDirBuild = objFSO.BuildPath(strDirBuild, arrDirs(i))
+				If Not objFSO.FolderExists(strDirBuild) Then
+					Debug "Создание папки " & Quotes(strDirName)
+					objFSO.CreateFolder strDirBuild
+				End if
+			Next
 		End If
-		For i = idxFirst to Ubound(arrDirs)
-			strDirBuild = objFSO.BuildPath(strDirBuild, arrDirs(i))
-			If Not objFSO.FolderExists(strDirBuild) Then
-				objFSO.CreateFolder strDirBuild
-			End if
-		Next
 
 		DebugError(Err)
 	End Sub
 
 	Public Sub CopyFolder(ByVal strSource, ByVal strDestination, ByVal bRewrite)
 		CreateDirs strDestination
-		Debug "Копирование из " & strSource & " в " & strDestination
+		Debug "Копирование из " & Quotes(strSource) & " в " & Quotes(strDestination)
 		objFSO.CopyFolder strSource, strDestination, True
 		Debug "Копирование завершено"
 	End Sub
 
 	Public Sub CopyFile(ByVal strSource, ByVal strDestination, ByVal bRewrite)
-		Debug "Копирование из " & strSource & " в " & strDestination
+		Debug "Копирование из " & Quotes(strSource) & " в " & Quotes(strDestination)
 		objFSO.CopyFile strSource, strDestination, bRewrite
 	End Sub
 
@@ -317,9 +261,27 @@ Class SyncTool
 			Debug "Ошибка: " & objWshExec.StdErr.ReadAll
 		Else
 			Debug "Результат: " & Recode(objWshExec.StdOut.ReadAll, "cp866", "windows-1251")
+			'Debug "Завершено."
 		End If
 		
 		Set objWshExec = Nothing
+	End Sub
+
+	Public Sub SendMsgAdmin(ByVal strText)
+		On Error Resume Next
+
+		Dim objHttp, res
+
+		Set objHttp = CreateObject("Msxml2.ServerXMLHTTP")
+		
+		Debug "Сообщение для админа: " & strText
+		objHttp.Open "GET", "http://xmpp.6604.local/sendmessage_example.php?msg=" & strText, False, "server.6604", "server66"
+		objHttp.Send
+		
+		res = objHttp.ResponseText
+		'Debug "Результат отправки: " & res
+
+		Set objHttp = Nothing
 	End Sub
 
 	Public Function CountProcess(ByVal strProcessName)
@@ -329,6 +291,32 @@ Class SyncTool
 		CountProcess = colSWbemObjectSet.Count
 
 		Set colSWbemObjectSet = Nothing
+	End Function
+
+	Public Function GetLDAP(ByVal strValue)
+		Set objLDAPUser = GetObject("LDAP://fss.local:389/" & objSysInfo.UserName)
+		GetLDAP = objLDAPUser.Get(strValue)
+	End Function
+
+	Public Function DiskSpaceFree(ByVal strValue)
+		Dim disks, gb, e, free_space_gb
+
+		Set disks = objSWbemServices.ExecQuery("select * from Win32_LogicalDisk where DriveType=3")
+
+		free_space_gb = -1
+		gb = 1024*1024*1024
+
+		For Each e in disks
+			'Debug e.DeviceID
+			if e.DeviceID = strValue Then
+				free_space_gb=e.FreeSpace/gb
+			End If
+		Next
+
+		disks = Nothing
+
+		DiskSpaceFree = free_space_gb
+
 	End Function
 
 	Public Sub PutLDAP(ByVal strName, ByVal strValue)

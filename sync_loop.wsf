@@ -1,152 +1,152 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <package>
 
-<job id="SyncLoop">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
+	<job id="SyncLoop">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
 
-	']]>
-</script>
-</job>
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoopUtils">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoopUtils")
+	<job id="SyncLoopUtils">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoopUtils")
 
-	On Error Resume Next
+			On Error Resume Next
 
-	With objSync
-		.Debug "begin"
-		' Запуск программы LaunchBar.exe
-		If .CountProcess("LaunchBar.exe") = 0 Then
-			.Run .LocalPathToSync & "\utilities\LaunchBar\LaunchBar.exe " & .LocalPathToSync & "\utilities\LaunchBar\LaunchBar.txt", 1, False
-		End If
-		.Sleep 2
-		' Запуск программы eyecu.exe
-		If .CountProcess("eyecu.exe") = 0 Then
-			.Run .LocalPathToSync & "\utilities\eyecu\eyecu.exe", 1, False
-		End If
+			With objSync
+				.Debug "begin"
+				' Запуск программы LaunchBar.exe
+				If .CountProcess("LaunchBar.exe") = 0 Then
+					.Run .Env("FSSPath") & "\" & "utilities\LaunchBar\LaunchBar.exe " & .Env("FSSPath") & "\" & "utilities\LaunchBar\LaunchBar.txt", 1, False
+				End If
+				.Sleep 2
+				' Запуск программы eyecu.exe
+				If .CountProcess("eyecu.exe") = 0 Then
+					.Run .Env("FSSPath") & "\" & "utilities\eyecu\eyecu.exe", 1, False
+				End If
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.DebugError(Err)
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoopData">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoopData")
+	<job id="SyncLoopData">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoopData")
 
-	On Error Resume Next
+			On Error Resume Next
 
-	With objSync
-		.Debug "begin"
-		' Создаем на сервере папку сотрудника для хранения данных и копируем файлы
-		'.CreateDirs .NetPathToSync & "\sync-users\" & .LoginName
-		' Синхронизация папки \sync-users\ & userLoginName и наоборот.
-		' /M - Убрать атрибут Архивный с исходного файла после его копирования.
-		' /A-:A - Убрать атрибут Архивный с копии файла.
-		' /IA:A - Выбирать файлы для копирования с установленным атрибутом Архивный.
-		' /S - Копировать вложенные папки, кроме пустых.
-		' /FFT - Использовать время файлов FAT (двухсекундная точность).
-		' /Z - Копирование файлов с возобновлением.
-		Dim strParameters
-		strParameters = " /XF Thumbs.db /S /M /FFT /Z /IA:A /A-:A /NDL /NP"
-		' Синхронизация без удаления
-		.RunC "robocopy " & .Quotes(.AppDataFolder) & " " & .Quotes(.NetPathToSync & "\sync-users\" & .LoginName) & strParameters & " /R:1 /W:3"
-		.RunC "robocopy " & .Quotes(.NetPathToSync & "\sync-users\" & .LoginName) & " " & .Quotes(.AppDataFolder) & strParameters & " /R:1 /W:3"
-		.Sleep 2
-		' Синхронизация с удалением отсутствующих файлов
-		' /PURGE - Удалять файлы и папки назначения, которых больше не существует в источнике.
-		' /R:n - Число повторных попыток для неудавшихся копий: по умолчанию - 1 миллион.
-		' /W:n - Время ожидания между повторными попытками: по умолчанию - 30 секунд.
-		.RunC "robocopy " & .Quotes(.AppDataFolder) & " " & .Quotes(.NetPathToSync & "\sync-users\" & .LoginName) & strParameters & " /PURGE"
-		.RunC "robocopy " & .Quotes(.NetPathToSync & "\sync-users\" & .LoginName) & " " & .Quotes(.AppDataFolder) & strParameters & " /PURGE"
+			With objSync
+				.Debug "begin"
+				' Создаем на сервере папку сотрудника для хранения данных и копируем файлы
+				'.CreateDirs .Env("FSSPathNet") & "\sync-users\" & .Env("UserName")
+				' Синхронизация папки \sync-users\ & userLoginName и наоборот.
+				' /M - Убрать атрибут Архивный с исходного файла после его копирования.
+				' /A-:A - Убрать атрибут Архивный с копии файла.
+				' /IA:A - Выбирать файлы для копирования с установленным атрибутом Архивный.
+				' /S - Копировать вложенные папки, кроме пустых.
+				' /FFT - Использовать время файлов FAT (двухсекундная точность).
+				' /Z - Копирование файлов с возобновлением.
+				Dim strParameters
+				strParameters = " /XF Thumbs.db /S /M /FFT /Z /IA:A /A-:A /NDL /NP /R:1 /W:3"
+				' Синхронизация без удаления
+				.RunC "robocopy " & .Quotes(.Env("AppData")) & " " & .Quotes(.Env("FSSPathNet") & "\" & "sync-users" & "\" & .Env("UserName")) & strParameters
+				.RunC "robocopy " & .Quotes(.Env("FSSPathNet") & "\" & "sync-users" & "\" & .Env("UserName")) & " " & .Quotes(.Env("AppData")) & strParameters
+				.Sleep 2
+				' Синхронизация с удалением отсутствующих файлов
+				' /PURGE - Удалять файлы и папки назначения, которых больше не существует в источнике.
+				' /R:n - Число повторных попыток для неудавшихся копий: по умолчанию - 1 миллион.
+				' /W:n - Время ожидания между повторными попытками: по умолчанию - 30 секунд.
+				.RunC "robocopy " & .Quotes(.Env("AppData")) & " " & .Quotes(.Env("FSSPathNet") & "\" & "sync-users" & "\" & .Env("UserName")) & strParameters & " " & "/PURGE"
+				.RunC "robocopy " & .Quotes(.Env("FSSPathNet") & "\" & "sync-users" & "\" & .Env("UserName")) & " " & .Quotes(.Env("AppData")) & strParameters & " " & "/PURGE"
 
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoop5m">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoop5m")
+	<job id="SyncLoop5m">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoop5m")
 
-	With objSync
-		.Debug "begin"
+			With objSync
+				.Debug "begin"
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.DebugError(Err)
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoop10m">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoop10m")
+	<job id="SyncLoop10m">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoop10m")
 
-	With objSync
-		.Debug "begin"
-		' Запуск рабочих утилит
-		createComponent "SyncLoopUtils"
+			With objSync
+				.Debug "begin"
+				' Запуск рабочих утилит
+				createComponent "SyncLoopUtils"
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.DebugError(Err)
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoop30m">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoop30m")
+	<job id="SyncLoop30m">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoop30m")
 
-	With objSync
-		.Debug "begin"
-		' Синхронизация пользовательских данных
-		createComponent "SyncLoopData"
+			With objSync
+				.Debug "begin"
+				' Синхронизация пользовательских данных
+				createComponent "SyncLoopData"
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.DebugError(Err)
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
-<job id="SyncLoop60m">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("SyncLoop60m")
+	<job id="SyncLoop60m">
+		<script language="VBScript" src="ClassSyncTool.vbs"/>
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objSync
+			Set objSync = (New SyncTool)("SyncLoop60m")
 
-	With objSync
-		.Debug "begin"
+			With objSync
+				.Debug "begin"
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				.DebugError(Err)
+				.Debug "end"
+			End With
+		']]>
+		</script>
+	</job>
 
 </package>

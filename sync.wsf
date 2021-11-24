@@ -1,72 +1,198 @@
 <?xml version="1.0" encoding="windows-1251" ?>
 <package>
+	<job id="Start">
+		<script language="VBScript">
+		'<![CDATA[
+			' Возвращает строку в двойных кавычках
+			Public Function Quotes(ByVal strValue)
+				Quotes = """" & strValue & """"
+			End Function
 
-<job id="Sync">
-<script language="VBScript">
-	WScript.Sleep 5000
+			' Сохранение переменных в Пользовательские переменные среды
+			Set obj = createComponent("SetVariables")
+			'WScript.Sleep 1000
 
-	createComponent "Sync2"
-</script>
-</job>
+			' Копирование рабочих файлов
+			Set obj = createComponent("CopyFolderTools")
+			WScript.Sleep 1000
 
-<job id="Sync2">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-	Dim objSync
-	Set objSync = (New SyncTool)("Sync")
+			Dim objWshShell, wshEnviromentProcess
 
-	With objSync
-		' Устновка переменных
-		' Имя папки для сихронизации
-		.SyncFolderName = "6604"
-		' Путь к папке на локальном ПК
-		.LocalPathToSync = "C:\" & .SyncFolderName
-		' Путь к папке на сервере
-		.NetPathToSync = "\\10.66.4.215\" & .SyncFolderName
-		' Путь до общей папке на сервере
-		.PathToPublic = "\\10.66.4.253\Public"
-		' Группа в AD пользователей филиала
-		.GeneralGroup = "6604 Общая"
-		' Установка переменных окружения
-		' Путь к утилитам
-		.SetEnviroment "PATH", .LocalPathToSync & "\tools"
-		' Путь к иконкам
-		.SetEnviroment "FSSPathIcons", .LocalPathToSync & "\data\icons"
-		.Sleep(5)
+			Set objWshShell = WScript.CreateObject("WScript.Shell")
+			Set wshEnviromentProcess = objWshShell.Environment("Process")
 
-		.Init("Sync")
-		' -----------------------------------------------------------------------------
-		'.DebugClearIfSize(.PathToLogFile, 1000)
-		'.DebugClearIfSize(.AppDataFolder & "\robocopy.log", 3000)
-		.DebugClearIfSize(1000)
-		.Debug "begin"
-		.Debug "============================== " & "Переменные" & "============================== "
-		.Debug "PathToLogFile = " & .PathToLogFile
-		.Debug "SyncFolderName = " & .SyncFolderName
-		.Debug "LocalPathToSync = " & .LocalPathToSync
-		.Debug "NetPathToSync = " & .NetPathToSync
-		.Debug "PathToPublic = " & .PathToPublic
-		.Debug "GeneralGroup = " & .GeneralGroup
-		.Debug "LoginName = " & .LoginName
-		.Debug "ComputerName = " & .ComputerName
-		.Debug "AppDataFolder = " & .AppDataFolder
-		.Debug "UserFullName = " & .UserFullName
-		.Debug "LDAPUserName = " & .LDAPUserName
-		.Debug "============================== " & Now & "============================== "
+			' Копирование значения переменных из Пользовательских переменных среды
+			Dim strFolderName, strLocalPath, strNetPath
+
+			strFolderName = wshEnviromentProcess("strFolderName")
+			strLocalPath = wshEnviromentProcess("strLocalPath")
+			strNetPath = wshEnviromentProcess("strNetPath")
+
+			' Запуск сценария синхронизации
+			WScript.Sleep 1000
+			objWshShell.Run Quotes(strLocalPath & "\" & strFolderName & "\" & "tools" & "\" & "sync_begin.wsf"), 0, False
+
+		']]>
+		</script>
+	</job>
+
+	<job id="SetVariables">
+		<script language="VBScript">
+		'<![CDATA[
+			Dim objFSO, objWshShell, wshEnviromentProcess, wshEnviromentUser
+
+			Set objFSO = WScript.CreateObject("Scripting.FileSystemObject")
+			Set objWshShell = WScript.CreateObject("WScript.Shell")
+			Set wshEnviromentProcess = objWshShell.Environment("Process")
+			Set wshEnviromentUser = objWshShell.Environment("User")
+
+			Dim strFolderName, strLocalPath, strNetPath, strNetPublic, strGeneralGroup
+			' =================================================================================================================
+			' Задать пути.
+			'
+			' Имя рабочей папки для синхронизации.
+			strFolderName = "6604"
+			' Путь до локальной папки, где распологается рабочая папка. Папка должна существовать.
+			strLocalPath = "C:"
+			' Путь до сетевой папки, содержащей рабочую папку.
+			strNetPath = "\\10.66.4.215"
+			' Путь к общей пользовательской папке на фаил сервере.
+			strNetPublic = "\\10.66.4.253\Public"
+			' Группа в AD для всех сотрудников.
+			strGeneralGroup = "6604 Общая"
+			' =================================================================================================================
+			On Error Resume Next
+			wshEnviromentProcess("strFolderName") = strFolderName
+			wshEnviromentProcess("strLocalPath") = strLocalPath
+			wshEnviromentProcess("strNetPath") = strNetPath
+			wshEnviromentProcess("strNetPublic") = strNetPublic
+			wshEnviromentProcess("strGeneralGroup") = strGeneralGroup
+
+			' Имя папки для сихронизации.
+			wshEnviromentUser.Remove("FSSFolderName")
+			wshEnviromentUser("FSSFolderName") = strFolderName
+			' Путь к папке на локальном ПК.
+			wshEnviromentUser.Remove("FSSPath")
+			wshEnviromentUser("FSSPath") = strLocalPath & "\" & strFolderName
+			' Путь к папке на сервере
+			wshEnviromentUser.Remove("FSSPathNet")
+			wshEnviromentUser("FSSPathNet") = strNetPath & "\" & strFolderName
+			' Путь до общей папке на сервере.
+			wshEnviromentUser.Remove("FSSPathPublic")
+			wshEnviromentUser("FSSPathPublic") = strNetPublic
+			' Группа в AD пользователей филиала.
+			wshEnviromentUser.Remove("FSSGeneralGroup")
+			wshEnviromentUser("FSSGeneralGroup") = strGeneralGroup
+			' Путь к утилитам.
+			wshEnviromentUser("PATH") = strLocalPath & "\" & strFolderName & "\" & "tools"
+			' Путь к иконкам
+			wshEnviromentUser.Remove("FSSPathIcons")
+			wshEnviromentUser("FSSPathIcons") = strLocalPath & "\" & strFolderName & "\" & "data\icons"
+			' ФИО пользователя из домена
+			'.SetEnviroment "FSSUserFullName", .GetLDAP("cn")
+		']]>
+		</script>
+	</job>
+
+	<job id="CopyFolderTools">
+		<script language="VBScript">
+		'<![CDATA[
+			' Возвращает строку в двойных кавычках
+			Public Function Quotes(ByVal strValue)
+				Quotes = """" & strValue & """"
+			End Function
+
+			' Сохранение переменных в Пользовательские переменные среды
+			'createComponent "SetVariables"
+
+			Dim objFSO, objWshShell, wshEnviromentProcess
+
+			Set objFSO = WScript.CreateObject("Scripting.FileSystemObject")
+			Set objWshShell = WScript.CreateObject("WScript.Shell")
+			Set wshEnviromentProcess = objWshShell.Environment("Process")
+
+			' Копирование значения переменных из Пользовательских переменных среды
+			Dim strFolderName, strLocalPath, strNetPath
+
+			strFolderName = wshEnviromentProcess("strFolderName")
+			strLocalPath = wshEnviromentProcess("strLocalPath")
+			strNetPath = wshEnviromentProcess("strNetPath")
+
+			' Переменные для сокращения записи
+			Dim strLocalPathToSync, strNetPathToSync, strAppDataFolder
+
+			strLocalPathToSync = strLocalPath & "\" & strFolderName
+			strNetPathToSync = strNetPath & "\" & strFolderName
+			strAppDataFolder = wshEnviromentProcess("APPDATA") & "\" & strFolderName
+
+			' Создание локальной папки для рабочик файлов
+			CreateDirs(strLocalPathToSync & "\" & "tools")
+
+			' Копирование файлов с сервера в локальную папку
+			objFSO.CopyFile strNetPathToSync & "\" & "sync" & "\" & "tools" & "\" & "*.exe", strLocalPathToSync & "\" & "tools", True
+			objWshShell.Run strLocalPathToSync & "\" & "tools" & "\" & "robocopy.exe" & " " & Quotes(strNetPathToSync & "\" & "sync" & "\" & "tools") & " " & Quotes(strLocalPathToSync & "\" & "tools") & " " & "/MIR /XF .* /XD .*", 0, True
+			
+			' Создание папки для пользовательски данных
+			CreateDirs(strAppDataFolder)
+
+			' Создает дерев папок на диске
+			Public Sub CreateDirs(ByVal strDirName)
+				On Error Resume Next
 		
-		On Error Resume Next
-		.CreateDirs .AppDataFolder
-		.CreateDirs .LocalPathToSync
-		.Debug "Копирование папки tools с сервера на ПК"
-		.CopyFolder .NetPathToSync & "\sync\tools", .LocalPathToSync & "\tools", True
-		'.Run "robocopy " & .NetPathToSync & "\sync\tools " & .LocalPathToSync & "\tools /LOG+:" & .AppDataFolder & "\robocopy.log" & " /PURGE", 0, False
-		.Sleep(5)
-		.Run .LocalPathToSync & "\tools\sync_begin.wsf", 0, False
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+				Dim arrDirs, i, idxFirst, strDir, strDirBuild
+				strDir = objFSO.GetAbsolutePathName(strDirName)
+				arrDirs = Split(strDir, "\")
+		
+				If Not objFSO.FolderExists(strDir) Then
+					If Left(strDir, 2) = "\\" Then
+						strDirBuild = "\\" & arrDirs(2) & "\" & arrDirs(3) & "\"
+						idxFirst    = 4
+					Else
+						strDirBuild = arrDirs(0) & "\"
+						idxFirst    = 1
+					End If
+					For i = idxFirst to Ubound(arrDirs)
+						strDirBuild = objFSO.BuildPath(strDirBuild, arrDirs(i))
+						If Not objFSO.FolderExists(strDirBuild) Then
+							objFSO.CreateFolder strDirBuild
+						End if
+					Next
+				End If
+
+			End Sub
+		']]>
+		</script>
+	</job>
+
+	<job id="DeleteFolderTools">
+		<script language="VBScript">
+		'<![CDATA[
+			' Сохранение переменных в Пользовательские переменные среды
+			createComponent "SetVariables"
+
+			Dim objFSO, objWshShell, wshEnviromentProcess
+
+			Set objFSO = WScript.CreateObject("Scripting.FileSystemObject")
+			Set objWshShell = WScript.CreateObject("WScript.Shell")
+			Set wshEnviromentProcess = objWshShell.Environment("Process")
+
+			' Копирование значения переменных из Пользовательских переменных среды
+			Dim strFolderName, strLocalPath
+
+			strFolderName = wshEnviromentProcess("strFolderName")
+			strLocalPath = wshEnviromentProcess("strLocalPath")
+
+			' Переменные для сокращения записи
+			Dim strLocalPathToSync
+
+			strLocalPathToSync = strLocalPath & "\" & strFolderName
+			
+			' Удаление файлов в папке с рабочими файлами
+			If objFSO.FolderExists(strLocalPathToSync & "\" & "tools") Then
+				objFSO.DeleteFile strLocalPathToSync & "\" & "tools" & "\" & "*.*", True
+			End If
+		']]>
+		</script>
+	</job>
 
 </package>

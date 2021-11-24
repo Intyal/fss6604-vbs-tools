@@ -273,6 +273,36 @@ Class HardwareInfo
 		GetCSV = strHeader & VbCrLf & strText
 	End Function
 
+	Public Function GetDiskFreeSpace(ByVal strValue)
+		' Данные по дискам
+		Dim str, size_gb, free_space_gb, free_percentage
+
+		For Each objItem In objQueryResultLogicalDisk
+			size_gb = objItem.Size / gb
+			free_space_gb = objItem.FreeSpace / gb
+			free_percentage = free_space_gb * 100 / size_gb
+			If objItem.DeviceID = strValue Then
+				GetDiskFreeSpace = free_space_gb
+			End If
+		Next
+
+	End Function
+
+	Public Function GetDiskSpace()
+		' Данные по дискам
+		Dim str, size_gb, free_space_gb, free_percentage
+
+		For Each objItem In objQueryResultLogicalDisk
+			size_gb = objItem.Size / gb
+			free_space_gb = objItem.FreeSpace / gb
+			free_percentage = free_space_gb * 100 / size_gb
+
+			str = str & "- " & "Логический Диск " & objItem.DeviceID & " -" & VbCrLf
+			str = str & TxtTab("Размер диска:", Fix(size_gb) & " Гб ")
+			str = str & TxtTab("Свободно:", Fix(free_space_gb) & " Гб" & " (" & Fix(free_percentage) & "%)")
+		Next
+	End Function
+
 End Class
 
 'Dim objHW

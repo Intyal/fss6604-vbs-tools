@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="windows-1251" standalone = "yes" ?>
 <package>
 
-<job id="NIST">
-<script language="VBScript" src="ClassSyncTool.vbs"/>
-<script language="VBScript">
-	'<![CDATA[
-    Dim objSync
-    Dim strPath
+    <job id="NIST">
+        <script language="VBScript" src="ClassSyncTool.vbs"/>
+        <script language="VBScript">
+        '<![CDATA[
+            Dim objSync
+            Dim strPath
 
-    If WScript.Arguments.Count > 1 Then
-        ' Разбор переданных аргументов
-        Set objSync = (New SyncTool)(WScript.Arguments(0))
-        strPath = "\nist\" & WScript.Arguments(1)
-    Else
-        Set objSync = (New SyncTool)("Nothing")
-        strPath = ""
-    End If
-
-	On Error Resume Next
-
-	With objSync
-        .Debug "begin"
-        
-        .Debug "Количество аргументов: " & WScript.Arguments.Count
-        If WScript.Arguments.Count < 2 Then
-            .Debug "Мало аргументов."
-        ElseIf .FileExists(.LocalPathToSync & strPath & "\" & .JobName) = False Then
-            .Debug "Не найден фаил: " & .Quotes(.LocalPathToSync & strPath & "\" & .JobName)
-        Else
-            .Debug "Исполняемый фаил: " & .Quotes(WScript.Arguments(0))
-            .Debug "Директория: " & .Quotes(WScript.Arguments(1))
-
-            .Debug "Локальная Версия : " & .GetFileVersion(.LocalPathToSync & strPath & "\" & .JobName)
-            .Debug "Версия на сервере: " & .GetFileVersion(.NetPathToSync & "\sync" & strPath & "\" & .JobName)
-        
-            ' Проверка, запущено ли приложение
-            .Debug "Запущено копий: " & .CountProcess(.JobName)
-            If .CountProcess(.JobName) = 0 Then
-                ' Показ сообщения
-                .Run "nircmdc trayballoon ""update"" ""Проверка обновлений."" ""C:\6604\data\icons\update.ico"" 6000", 0, False
-                ' Обновлние
-                .RunC "robocopy " & .Quotes(.NetPathToSync & "\sync" & strPath) & " " & .Quotes(.LocalPathToSync & strPath) & " /MIR /FFT /Z /R:2 /W:2"
+            If WScript.Arguments.Count > 1 Then
+                ' Разбор переданных аргументов
+                Set objSync = (New SyncTool)(WScript.Arguments(0))
+                strPath = "\nist\" & WScript.Arguments(1)
+            Else
+                Set objSync = (New SyncTool)("Nothing")
+                strPath = ""
             End If
 
-            ' Запуск приложения
-            .Run .Quotes(.LocalPathToSync & strPath & "\" & .JobName), 1, False
-        End If
+            'On Error Resume Next
 
-		.DebugError(Err)
-		.Debug "end"
-	End With
-	']]>
-</script>
-</job>
+            With objSync
+                .Debug "begin"
+                
+                .Debug "Количество аргументов: " & WScript.Arguments.Count
+                If WScript.Arguments.Count < 2 Then
+                    .Debug "Мало аргументов."
+                ElseIf .FileExists(.Env("FSSPath") & strPath & "\" & .JobName) = False Then
+                    .Debug "Не найден фаил: " & .Quotes(.Env("FSSPath") & strPath & "\" & .JobName)
+                Else
+                    .Debug "Исполняемый фаил: " & .Quotes(WScript.Arguments(0))
+                    .Debug "Директория: " & .Quotes(WScript.Arguments(1))
+
+                    .Debug "Локальная Версия : " & .GetFileVersion(.Env("FSSPath") & strPath & "\" & .JobName)
+                    '.Debug "Версия на сервере: " & .GetFileVersion(.Env("FSSPathNet") & "\sync" & strPath & "\" & .JobName)
+                
+                    ' Проверка, запущено ли приложение
+                    .Debug "Запущено копий: " & .CountProcess(.JobName)
+                    If .CountProcess(.JobName) = 0 Then
+                        ' Показ сообщения
+                        .Run "nircmdc trayballoon ""update"" ""Проверка обновлений."" ""C:\6604\data\icons\update.ico"" 6000", 0, False
+                        ' Обновлние
+                        .Run "robocopy " & .Quotes(.Env("FSSPathNet") & "\sync" & strPath) & " " & .Quotes(.Env("FSSPath") & strPath) & " " & "/MIR /FFT /Z /R:2 /W:2", 0, True
+                    End If
+
+                    ' Запуск приложения
+                    .Run .Quotes(.Env("FSSPath") & strPath & "\" & .JobName), 1, False
+                End If
+
+                .DebugError(Err)
+                .Debug "end"
+            End With
+        ']]>
+        </script>
+    </job>
 
 </package>
